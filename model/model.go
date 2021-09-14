@@ -5,21 +5,30 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type User struct {
-	user_name  string `json:"user_name"`
-	address    string `json:"address"`
-	department string `json:"department"`
-	user_id    uint32 `json:"user_id"`
-	age        uint8  `json:"age"`
-	tel        uint32 `json:"tel"`
+	User_name  string `json:"user_name"`
+	Address    string `json:"address"`
+	Department string `json:"department"`
+	User_id    uint32 `json:"user_id"`
+	Tel        uint32 `json:"tel"`
+	Age        uint8  `json:"age"`
 }
 
+//type User struct {
+//Username string
+//Age      int
+//Job      string
+//Hobby    string
+//}
+
 type Employee struct {
-	induction_time time.Time `json:"induction_time"`
-	dept_name      string    `json:"dept_name"`
-	position       string    `json:"position"`
+	Induction_time time.Time `json:"induction_time"`
+	Dept_name      string    `json:"dept_name"`
+	Position       string    `json:"position"`
 }
 
 // var (
@@ -33,39 +42,59 @@ var db *sql.DB
 
 func init() {
 	//连接数据库
-	dsn := "root:123456@tcp(127.0.0.1:3306)/test"
-	db, err := sql.Open("mysql", dsn)
+	db, err := sql.Open("sqlite3", "./user.db")
 	if err != nil {
-		return err
-	}
-	// 尝试与数据库建立连接（校验dsn是否正确）
-	err = db.Ping()
-	if err != nil {
-		return err
-	}
-	return nil
-	//配置数据库连接的限制.
-	// db.SetConnMaxLifetime(config.ConnMaxLifetime)
-	// db.SetMaxIdleConns(config.MaxIdleConns)
-	// db.SetMaxOpenConns(config.MaxOpenConns)
-
-	//测试是否连接成功.
-	if err = db.Ping(); err != nil {
 		panic(err)
 	}
+	err = createTable(db)
+	if err != nil {
+		return
+	}
+	//insertData(db, User{"zhangsan", 28, "engineer", "play football"})
+}
 
-	//预处理mysql语句
-	// createUser = dbPrepare(db, "INSERT INTO users (user_id, user_name, age, address, tel, department) values (?, ?, ?, ?, ?, ?)")
-	// createEmployee = dbPrepare(db, "INSERT INTO employee (user_name, nick_name) values (?, ?)")
-	// deleteEmployee = dbPrepare(db, "DELETE FROM users WHERE (user_id = ?, nick_name) values (?, ?)")
-	// deleteEmployee = dbPrepare(db, "DELETE FROM employee WHERE (user_name, nick_name) values (?, ?)")
+func createTable2(db *sql.DB) error {
+	sql := `create table if not exists "users" (
+	"id" integer primary key autoincrement,
+	"username" text not null,
+	"age" integer not null,
+	"job" text,
+	"hobby" text
+	)`
+	_, err := db.Exec(sql)
+	return err
+}
 
-	fmt.Println("mysql init done.")
+//func insertData(db *sql.DB, u User) error {
+//fmt.Println(u)
+//sql := `insert into users (username, age, job, hobby) values(?,?,?,?)`
+//stmt, err := db.Prepare(sql)
+//if err != nil {
+//return err
+//}
+//_, err = stmt.Exec(u.Username, u.Age, u.Job, u.Hobby)
+//return err
+//}
+
+func createTable(db *sql.DB) error {
+	sql := `create table if not exists "users" (
+	"user_id" integer primary key not null,
+	"user_name" text not null,
+	"age" integer not null,
+	"address" text not null,
+	"tel" integer not null,
+	"department" text not null
+	)`
+	_, err := db.Exec(sql)
+	return err
 }
 
 func (u User) AddUser() error {
-	sqlStr := "INSERT INTO users (user_id, user_name, age, address, tel, department) values (?, ?, ?, ?, ?, ?)"
-	ret, err := db.Exec(sqlStr, u.user_id, u.user_name, u.age, u.address, u.tel, u.department)
+	fmt.Println(u)
+	sql := `insert into users (user_id, user_name, age, address, tel, department) values (?, ?, ?, ?, ?, ?)`
+	stmt, err := db.Prepare(sql)
+	res, err := stmt.Exec(u.User_id, u.User_name, u.Age, u.Address, u.Tel, u.Department)
+	fmt.Println(res)
 	if err != nil {
 		log.Printf("insert failed, err:%v\n", err)
 		return err
