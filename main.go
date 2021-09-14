@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"worker_demo/model"
 
@@ -23,5 +24,16 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	u.AddUser()
+	err = u.AddUser(model.db)
+	fmt.Println("response")
+	if err != nil {
+		log.Panic(err)
+	}
+	resp := make(map[string]string)
+	resp["message"] = "success"
+	jsonResp, err := json.Marshal(resp)
+	if err != nil {
+		log.Panic(err)
+	}
+	w.Write(jsonResp)
 }

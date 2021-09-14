@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type User struct {
@@ -42,13 +42,19 @@ var db *sql.DB
 
 func init() {
 	//连接数据库
-	db, err := sql.Open("sqlite3", "./user.db")
+	db, err := sql.Open("mysql", "root:123456@tcp(127.0.0.1:3306)/worker_demo?charset=utf8")
+	// db, err := sql.Open("mysql", "root:123456@tcp(127.0.0.1:3306)/worker_demo?charset=utf8&parseTime=True")
+	if err != nil {
+		panic(err)
+	}
+	err = db.Ping()
 	if err != nil {
 		panic(err)
 	}
 	err = createTable(db)
+	fmt.Println(db)
 	if err != nil {
-		return
+		fmt.Println(err)
 	}
 	//insertData(db, User{"zhangsan", 28, "engineer", "play football"})
 }
@@ -77,27 +83,47 @@ func createTable2(db *sql.DB) error {
 //}
 
 func createTable(db *sql.DB) error {
-	sql := `create table if not exists "users" (
-	"user_id" integer primary key not null,
-	"user_name" text not null,
-	"age" integer not null,
-	"address" text not null,
-	"tel" integer not null,
-	"department" text not null
-	)`
+	sql := `
+	CREATE TABLE users(
+	user_id int(11) NOT NULL,
+	user_name varchar(20) NOT NULL,
+	age int(11) NOT NULL,
+	address varchar(30) NOT NULL,
+	tel int(15) NOT NULL,
+	department varchar(30) NOT NULL,
+	primary key(user_id)
+	);
+	`
 	_, err := db.Exec(sql)
 	return err
 }
 
 func (u User) AddUser() error {
-	fmt.Println(u)
-	sql := `insert into users (user_id, user_name, age, address, tel, department) values (?, ?, ?, ?, ?, ?)`
-	stmt, err := db.Prepare(sql)
-	res, err := stmt.Exec(u.User_id, u.User_name, u.Age, u.Address, u.Tel, u.Department)
-	fmt.Println(res)
+	// fmt.Println(u)
+	// sql := "insert into users (user_id, user_name, age, address, tel, department) values (?, ?, ?, ?, ?, ?)"
+	// stmt, err := db.Prepare(sql)
+	// defer stmt.Close()
+	// if err != nil {
+	//     log.Panic(err)
+	// }
+	// res, err := stmt.Exec(u.User_id, u.User_name, u.Age, u.Address, u.Tel, u.Department)
+	// fmt.Println(res)
+	// if err != nil {
+	//     log.Printf("insert failed, err:%v\n", err)
+	//     fmt.Println("err1")
+	//     return err
+	// }
+	// fmt.Println("err2")
+	// return nil
+	fmt.Println("AddUser")
+	fmt.Println(db)
+	stmt, err := db.Prepare("insert into t(name,ts) values(?,?)")
+	fmt.Println("AddUser2")
+	defer stmt.Close()
 	if err != nil {
-		log.Printf("insert failed, err:%v\n", err)
-		return err
+		log.Println(err)
 	}
+	ts, _ := time.Parse("2006-01-02 15:04:05", "2014-08-28 15:04:00")
+	stmt.Exec("edmond", ts)
 	return nil
 }
