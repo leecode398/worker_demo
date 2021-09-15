@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -22,6 +23,7 @@ type Employee struct {
 	Induction_time string `json:"induction_time"`
 	Dept_name      string `json:"dept_name"`
 	Position       string `json:"position"`
+	ID             uint32 `json:"id"`
 }
 
 var db = &sql.DB{}
@@ -30,6 +32,11 @@ func init() {
 	//连接数据库
 	var err error
 	db, err = sql.Open("mysql", "root:123456@tcp(127.0.0.1:3306)/worker_demo?charset=utf8")
+	db.SetMaxOpenConns(200)
+	db.SetMaxIdleConns(100)
+	db.SetConnMaxLifetime(8 * time.Hour)
+	db.SetConnMaxIdleTime(8 * time.Hour)
+	db.Ping()
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +50,7 @@ func init() {
 func createTable(db *sql.DB) error {
 	users := `
 	CREATE TABLE IF NOT EXISTS users(
-	user_id int(11) NOT NULL,
+	user_id int(11) NOT NULL COMMENT,
 	user_name varchar(20) NOT NULL,
 	age int(11) NOT NULL,
 	address varchar(30) NOT NULL,
@@ -107,33 +114,67 @@ func DeleteUser(u *User) error {
 	return nil
 }
 
-func UpdateUser(u *User) error {
-	sql := "delete from users where (user_id = ?)"
-	stmt, err := db.Prepare(sql)
-	defer stmt.Close()
-	if err != nil {
-		log.Panic(err)
-	}
-	_, err = stmt.Exec(u.User_id)
-	if err != nil {
-		log.Printf("detele failed, err:%v\n", err)
-		return err
+func UpdateUser(m map[string]interface{}) error {
+	var sql string
+	for key, value := range m {
+		sql = fmt.Sprintf("update users set %s = '%v' where user_id = ?", key, value)
+		fmt.Println(sql)
+		stmt, err := db.Prepare(sql)
+		defer stmt.Close()
+		if err != nil {
+			log.Panic(err)
+		}
+		_, err = stmt.Exec(m["user_id"])
+		if err != nil {
+			log.Printf("detele failed, err:%v\n", err)
+			return err
+		}
 	}
 	return nil
 }
 
-func QueryUser(u *User) error {
-	sql := "select * from users where (user_id = ?)"
+func UpdateEmployee(m map[string]interface{}) error {
+	var sql string
+	for key, value := range m {
+		if key == "user_id" {
+			continue
+		}
+		sql = fmt.Sprintf("update employee set %s = '%v' where id = ?", key, value)
+		fmt.Println(sql)
+		stmt, err := db.Prepare(sql)
+		defer stmt.Close()
+		if err != nil {
+			log.Panic(err)
+		}
+		_, err = stmt.Exec(m["user_id"])
+		if err != nil {
+			log.Printf("detele failed, err:%v\n", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func QueryUser(u *User) (*User, error) {
+	var us User
+	sql := "select * from users inner join employee on users.user_id = employee.id where (user_id = ?)"
 	stmt, err := db.Prepare(sql)
 	defer stmt.Close()
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
-	ans, err := stmt.Exec(u.User_id)
-	fmt.Println(ans)
+	rows, err := stmt.Query(u.User_id)
+	for rows.Next() {
+		err := rows.Scan(&us.User_id, &us.User_name, &us.Age, &us.Address, &us.Tel,
+			&us.Department, &us.ID, &us.Dept_name, &us.Position, &us.Induction_time)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if err != nil {
 		log.Printf("detele failed, err:%v\n", err)
-		return err
+		return nil, err
 	}
-	return nil
+	return &us, nil
 }
