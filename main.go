@@ -19,18 +19,21 @@ func main() {
 func AddUser(w http.ResponseWriter, r *http.Request) {
 	var u model.User
 	b, _ := io.ReadAll(r.Body)
-	fmt.Println(string(b))
 	err := json.Unmarshal(b, &u)
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = u.AddUser(model.db)
-	fmt.Println("response")
+	err = model.AddUser(&u)
 	if err != nil {
-		log.Panic(err)
+		writeResponse(w, "fail")
+		return
 	}
+	writeResponse(w, "success")
+}
+
+func writeResponse(w http.ResponseWriter, res string) {
 	resp := make(map[string]string)
-	resp["message"] = "success"
+	resp["message"] = res
 	jsonResp, err := json.Marshal(resp)
 	if err != nil {
 		log.Panic(err)
